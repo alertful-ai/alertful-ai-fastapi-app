@@ -14,27 +14,27 @@ app = FastAPI()
 
 
 class Page(BaseModel):
-    userId: int
-    pageUrl: str
+    user_id: int
+    page_url: str
     query: str
 
 
 class UpdatePage(Page):
-    pageId: str
+    page_id: str
 
 
 class Change(BaseModel):
     summary: str
-    pageId: str
-    imageUrl: str
+    page_id: str
+    image_url: str
 
 
 class PageResponse(BaseModel):
-    userId: int
-    pageUrl: str
+    user_id: int
+    page_url: str
     query: str
     created_at: str
-    pageId: str
+    page_id: str
     updated_at: str
 
 
@@ -56,9 +56,9 @@ async def add_pages(pages: List[Page]):
 
         # TODO fetch imageUrls
 
-        change_dicts = [{"summary": "", "pageId": page.pageId, "imageUrl": ""} for page in pages]
+        updates_to_insert = [{"summary": "", "pageId": page.page_id, "imageUrl": ""} for page in pages]
 
-        response = supabase.table('Change').insert(change_dicts).execute()
+        response = supabase.table('Change').insert(updates_to_insert).execute()
 
         if response.data:
             return {'message': 'success'}
@@ -76,7 +76,7 @@ async def remove_page(page_id):
 
 @app.put("/api/updatePage/")
 async def update_page(page: UpdatePage):
-    data, count = supabase.table('Page').update(page.dict()).eq('pageId', page.pageId).execute()
+    data, count = supabase.table('Page').update(page.dict()).eq('pageId', page.page_id).execute()
     if data:
         return {"data": data, "count": count}
 
