@@ -33,6 +33,7 @@ image_url = ""
 # TODO: fetch summary from chatGPT from page_query
 summary = ""
 
+# TODO: filter changes that contain a useful summary
 # create Changes
 changes_to_insert = [{"summary": summary,
                       "pageId": page.pageId,

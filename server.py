@@ -61,8 +61,9 @@ async def add_pages(pages: List[Page]):
         pages = [PageResponse(**page) for page in data]
 
         # TODO fetch imageUrls
+        image_url = ""
 
-        changes_to_insert = [{"summary": "Initial Image", "pageId": page.pageId, "imageUrl": ""} for page in pages]
+        changes_to_insert = [{"summary": "Initial Image", "pageId": page.pageId, "imageUrl": image_url} for page in pages]
 
         changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
