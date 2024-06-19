@@ -14,27 +14,27 @@ app = FastAPI()
 
 
 class Page(BaseModel):
-    user_id: int
-    page_url: str
+    userId: int
+    pageUrl: str
     query: str
 
 
 class UpdatePage(Page):
-    page_id: str
+    pageId: str
 
 
 class Change(BaseModel):
     summary: str
-    page_id: str
-    image_url: str
+    pageId: str
+    imageUrl: str
 
 
 class PageResponse(BaseModel):
-    user_id: int
-    page_url: str
+    userId: int
+    pageUrl: str
     query: str
     created_at: str
-    page_id: str
+    pageId: str
     updated_at: str
 
 
@@ -56,7 +56,7 @@ async def add_pages(pages: List[Page]):
 
         # TODO fetch imageUrls
 
-        updates_to_insert = [{"summary": "", "pageId": page.page_id, "imageUrl": ""} for page in pages]
+        updates_to_insert = [{"summary": "", "pageId": page.pageId, "imageUrl": ""} for page in pages]
 
         response = supabase.table('Change').insert(updates_to_insert).execute()
 
@@ -76,7 +76,7 @@ async def remove_page(page_id):
 
 @app.put("/api/updatePage/")
 async def update_page(page: UpdatePage):
-    data, count = supabase.table('Page').update(page.dict()).eq('pageId', page.page_id).execute()
+    data, count = supabase.table('Page').update(page.dict()).eq('pageId', page.pageId).execute()
     if data:
         return {"data": data, "count": count}
 
@@ -101,6 +101,7 @@ async def get_all_changes(page_id: str):
 
 @app.post("/api/addChange/")
 async def add_change(change: Change):
+    print("assadsd")
     data, count = supabase.table('Change').insert(change.dict()).execute()
     if data:
         return {"data": data, "count": count}

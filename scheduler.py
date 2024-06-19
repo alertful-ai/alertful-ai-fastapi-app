@@ -11,14 +11,14 @@ supabase: Client = create_client(url, key)
 
 
 class Page(BaseModel):
-    page_url: str
-    page_query: str
-    page_id: str
+    pageUrl: str
+    query: str
+    pageId: str
 
 
 # load all pages
-pageResponse = supabase.table('Page').select("pageId", "pageUrl", "query").execute()
-pages = [Page(**page) for page in pageResponse.data]
+page_response = supabase.table('Page').select("pageId", "pageUrl", "query").execute()
+pages = [Page(**page) for page in page_response.data]
 
 # TODO: generate image_url from page_url
 image_url = ""
@@ -27,5 +27,5 @@ image_url = ""
 summary = ""
 
 # create Changes
-change_dicts = [{"summary": summary, "pageId": page.page_id, "imageUrl": image_url} for page in pages]
-response = supabase.table('Change').insert(change_dicts).execute()
+changes_to_insert = [{"summary": summary, "pageId": page.pageId, "imageUrl": image_url} for page in pages]
+response = supabase.table('Change').insert(changes_to_insert).execute()
