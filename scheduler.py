@@ -41,4 +41,4 @@ class PageResponse(BaseModel):
 
 # load all pages
 
-
+# generate update for each page
