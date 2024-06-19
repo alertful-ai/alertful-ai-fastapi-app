@@ -25,7 +25,7 @@ class Change(BaseModel):
 # load all pages
 page_response = supabase.table('Page').select('*').execute()
 pages = [Page(**page) for page in page_response.data]
-pages_by_page_id = object_dict = dict((page.pageId, page) for page in pages)
+pages_by_page_id = dict((page.pageId, page) for page in pages)
 
 # TODO: generate image_url from page_url
 image_url = ""

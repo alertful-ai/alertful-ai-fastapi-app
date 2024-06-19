@@ -27,6 +27,7 @@ class Change(BaseModel):
     summary: str
     pageId: str
     imageUrl: str
+    changeId: str
 
 
 class PageResponse(BaseModel):
@@ -50,17 +51,30 @@ async def add_pages(pages: List[Page]):
     # Add Pages to DB
     response = supabase.table('Page').insert(page_dicts).execute()
     data = response.data
+    pages = [UpdatePage(**page) for page in data]
+    pages_by_page_id = dict((page.pageId, page) for page in pages)
 
     if data:
         pages = [PageResponse(**page) for page in data]
 
         # TODO fetch imageUrls
 
-        updates_to_insert = [{"summary": "", "pageId": page.pageId, "imageUrl": ""} for page in pages]
+        changes_to_insert = [{"summary": "Initial Image", "pageId": page.pageId, "imageUrl": ""} for page in pages]
 
-        response = supabase.table('Change').insert(updates_to_insert).execute()
+        changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
-        if response.data:
+        # updates Pages with latest Change
+        changes = [Change(**change) for change in changes_response.data]
+        pages_to_update = [{"userId": pages_by_page_id[change.pageId].userId,
+                            "pageUrl": pages_by_page_id[change.pageId].pageUrl,
+                            "query": pages_by_page_id[change.pageId].query,
+                            "pageId": change.pageId,
+                            "latestChange": change.changeId}
+                           for change in changes]
+
+        update_response = supabase.table('Page').upsert(pages_to_update).execute()
+
+        if update_response.data:
             return {'message': 'success'}
 
     return {'message': 'error!'}
@@ -101,7 +115,6 @@ async def get_all_changes(page_id: str):
 
 @app.post("/api/addChange/")
 async def add_change(change: Change):
-    print("assadsd")
     data, count = supabase.table('Change').insert(change.dict()).execute()
     if data:
         return {"data": data, "count": count}
