@@ -27,6 +27,9 @@ class Change(BaseModel):
     summary: str
     pageId: str
     imageUrl: str
+
+
+class UpdateChange(Change):
     changeId: str
 
 
@@ -64,7 +67,7 @@ async def add_pages(pages: List[Page]):
         changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
         # updates Pages with latest Change
-        changes = [Change(**change) for change in changes_response.data]
+        changes = [UpdateChange(**change) for change in changes_response.data]
         pages_to_update = [{"userId": pages_by_page_id[change.pageId].userId,
                             "pageUrl": pages_by_page_id[change.pageId].pageUrl,
                             "query": pages_by_page_id[change.pageId].query,
@@ -118,3 +121,5 @@ async def add_change(change: Change):
     data, count = supabase.table('Change').insert(change.dict()).execute()
     if data:
         return {"data": data, "count": count}
+
+    return {'message': 'error!'}
