@@ -1,14 +1,13 @@
-import uuid
-from typing import Union, List
+from typing import List
 
 from dotenv import load_dotenv
-
-load_dotenv()
 
 import os
 from supabase import create_client, Client
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+load_dotenv()
 
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
