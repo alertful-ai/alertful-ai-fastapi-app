@@ -1,11 +1,9 @@
-from typing import List
-
-from dotenv import load_dotenv
-
 import os
-from supabase import create_client, Client
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
+from supabase import create_client, Client
+from typing import List
 
 load_dotenv()
 
