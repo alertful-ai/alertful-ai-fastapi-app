@@ -1,5 +1,7 @@
+import asyncio
 import os
 from dotenv import load_dotenv
+from screenshot import capture_and_update_screenshot
 from supabase import create_client, Client
 from pydantic import BaseModel
 
@@ -27,8 +29,9 @@ page_response = supabase.table('Page').select('*').execute()
 pages = [Page(**page) for page in page_response.data]
 pages_by_page_id = dict((page.pageId, page) for page in pages)
 
-# TODO: generate image_url from page_url
-image_url = ""
+page_urls = set([page.pageUrl for page in pages])
+page_to_image_urls = asyncio.run(capture_and_update_screenshot(page_urls))
+
 # generate update for each page
 # TODO: fetch summary from chatGPT from page_query
 summary = ""
@@ -37,7 +40,7 @@ summary = ""
 # create Changes
 changes_to_insert = [{"summary": summary,
                       "pageId": page.pageId,
-                      "imageUrl": image_url}
+                      "imageUrl": page_to_image_urls[page.pageUrl]}
                      for page in pages]
 changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
