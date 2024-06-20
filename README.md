@@ -11,5 +11,10 @@ In root dir
 
 # To run devserver
 
-- `fastapi dev main.py` (dev mode)
-- `fastapi run main.py` (prod mode)
+- `fastapi dev server.py` (dev mode)
+- `fastapi run server.py` (prod mode)
+
+# To Kill Server
+
+- Find the process which is using port 8000: `sudo lsof -i:8000`
+- kill process: `kill -9 $pid`
