@@ -1,9 +1,11 @@
+import asyncio
 import uuid
+from typing import Dict, Set
+
 from dotenv import load_dotenv
 import os
 from pyppeteer import launch
 from supabase import create_client, Client
-import asyncio
 import boto3
 
 load_dotenv()
@@ -28,30 +30,46 @@ s3 = boto3.client(
 
 
 # Capture a screenshot of a URL and return the screenshot
-async def capture_screenshot(page_url, file_path):
-    browser = await launch(headless=True)
-    page = await browser.newPage()
-    await page.setViewport({'width': 1280, 'height': 800})
-    await page.goto(page_url, {'waitUntil': 'networkidle2'})
+async def capture_screenshot(page, page_url, file_path):
+    await page.goto(page_url)
     await page.screenshot({'path': file_path, 'fullPage': True})
-    await browser.close()
 
 
 async def upload_to_supabase(file_name: str, file_path: str):
     try:
         s3.upload_file(file_path, BUCKET_NAME, file_name, ExtraArgs={'ContentType': 'image/png'})
         file_url = f"{image_url}/{file_name}"
-        print(f"File {file_name} uploaded to {BUCKET_NAME}/{file_name}")
         return file_url
     except Exception as e:
         print(f"Error uploading file: {e}")
 
 
-async def capture_and_update_screenshot(page_url):
+async def process_page(page_url: str, browser) -> Dict[str, str]:
+    page = await browser.newPage()
+    await page.setViewport({'width': 1200, 'height': 800})
+
     file_name = f'{uuid.uuid4()}.png'
     local_file_path = f'screenshots/{file_name}'
 
-    await capture_screenshot(page_url, local_file_path)
-    file_url = await upload_to_supabase(file_name, local_file_path)
+    await capture_screenshot(page, page_url, local_file_path)
+    img_url = await upload_to_supabase(file_name, local_file_path)
 
-    return {'message': 'successful', 'file_url': file_url}
+    await page.close()
+    return {page_url: img_url}
+
+
+async def capture_and_update_screenshot(page_urls: Set[str]) -> Dict[str, str]:
+    # Launch headless browser
+    browser = await launch(headless=True)
+    tasks = [process_page(page_url, browser) for page_url in page_urls]
+    results = await asyncio.gather(*tasks)
+    await browser.close()
+
+    response = {k: v for d in results for k, v in d.items()}
+    return response
+
+
+if __name__ == '__main__':
+    test = asyncio.run(capture_and_update_screenshot(
+        {'https://www.twitter.com', 'https://www.facebook.com', 'https://www.google.com'}))
+    print(test)
