@@ -25,7 +25,7 @@ app.add_middleware(
 
 
 class Page(BaseModel):
-    userId: int
+    userId: str
     pageUrl: str
     query: str
 
@@ -45,7 +45,7 @@ class UpdateChange(Change):
 
 
 class PageResponse(BaseModel):
-    userId: int
+    userId: str
     pageUrl: str
     query: str
     created_at: str
