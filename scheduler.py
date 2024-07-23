@@ -1,6 +1,7 @@
 import asyncio
 import os
 from dotenv import load_dotenv
+from query import query_chat_gpt
 from screenshot import capture_and_update_screenshot
 from supabase import create_client, Client
 from pydantic import BaseModel
@@ -16,7 +17,7 @@ class Page(BaseModel):
     pageUrl: str
     query: str
     pageId: str
-    userId: int
+    userId: str
     latestChange: str
 
 
@@ -51,8 +52,8 @@ for page in pages_to_summarize:
     previous_snapshot = previous_page_snapshot[page.pageId]
     current_snapshot = page_to_image_urls[page.pageUrl]
     query = page.query
-    summary = "summary to fetch from chat GPT"
-    summary_by_page_id[page.pageId] = "summary to fetch from chat GPT"
+    summary = query_chat_gpt(previous_snapshot, current_snapshot, query)
+    summary_by_page_id[page.pageId] = summary
 
 # create Changes
 changes_to_insert = [{"summary": summary_by_page_id.get(page.pageId, "Initial Snapshot"),
