@@ -67,9 +67,3 @@ async def capture_and_update_screenshot(page_urls: Set[str]) -> Dict[str, str]:
 
     response = {k: v for d in results for k, v in d.items()}
     return response
-
-
-if __name__ == '__main__':
-    test = asyncio.run(capture_and_update_screenshot(
-        {'https://www.twitter.com', 'https://www.facebook.com', 'https://www.google.com'}))
-    print(test)
