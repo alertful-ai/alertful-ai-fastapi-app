@@ -40,12 +40,19 @@ latestChangeIds = [page.latestChange for page in pages]
 latest_changes_response = (supabase.table('Change').select("*")
                            .in_('changeId', latestChangeIds).execute())
 latest_changes = [Change(**change) for change in latest_changes_response.data]
+previous_page_snapshot = {change.pageId: change.imageUrl for change in latest_changes}
 pages_to_summarize = [page_by_page_id[change.pageId] for change in latest_changes
                       if change.imageUrl != "" and change.summary != ""]
 
 # generate update for each page
 # TODO: fetch summary from chatGPT from page_query
-summary_by_page_id = dict((page.pageId, "summary to fetch from chat GPT") for page in pages_to_summarize)
+summary_by_page_id = {}
+for page in pages_to_summarize:
+    previous_snapshot = previous_page_snapshot[page.pageId]
+    current_snapshot = page_to_image_urls[page.pageUrl]
+    query = page.query
+    summary = "summary to fetch from chat GPT"
+    summary_by_page_id[page.pageId] = "summary to fetch from chat GPT"
 
 # create Changes
 changes_to_insert = [{"summary": summary_by_page_id.get(page.pageId, "Initial Snapshot"),
