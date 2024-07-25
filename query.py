@@ -28,7 +28,7 @@ def encode_image(image_path):
 def send_request(previous_image_data, current_image_data, query):
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {open_ai_key}"}
     payload = {
-        "model": "gpt-4o",
+        "model": "gpt-4-turbo",
         "messages": [{
             "role": "user",
             "content": [{"type": "text", "text": query},
