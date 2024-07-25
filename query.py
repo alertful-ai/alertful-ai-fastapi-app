@@ -1,14 +1,20 @@
-from dotenv import load_dotenv
-from openai import OpenAI
 import base64
 import os
 import requests
 import uuid
+from dotenv import load_dotenv
+from openai import OpenAI
+from pydantic import BaseModel
 
 load_dotenv()
 
 open_ai_key: str = os.environ.get("OPENAI_API_KEY")
 client = OpenAI(api_key=open_ai_key)
+
+
+class Summary(BaseModel):
+    has_change: bool
+    summary: str
 
 
 def download_image(url):

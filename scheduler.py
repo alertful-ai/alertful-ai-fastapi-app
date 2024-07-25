@@ -1,10 +1,10 @@
 import asyncio
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel
 from query import query_chat_gpt
 from screenshot import capture_and_update_screenshot
 from supabase import create_client, Client
-from pydantic import BaseModel
 
 load_dotenv()
 
