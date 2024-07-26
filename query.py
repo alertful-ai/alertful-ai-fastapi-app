@@ -81,8 +81,6 @@ def query_chat_gpt(previous_snapshot_url: str, current_snapshot_url: str, chat_g
 
     parsed_response = json.loads(response.choices[0].message.function_call.arguments)
 
-    print("parsed_response", parsed_response)
-
     summary = Summary(**parsed_response)
 
     return summary.summary
