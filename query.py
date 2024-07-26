@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import requests
 import uuid
@@ -17,6 +18,28 @@ class Summary(BaseModel):
     summary: str
 
 
+functions = [
+    {
+        "name": "page_summary",
+        "description": "Compare the pages based off the users prompt.",
+        "parameters": {
+            "type": "object",
+            "required": ["summary", "has_change"],
+            "properties": {
+                "summary": {
+                    "type": "string",
+                    "description": "Summary of the changes between snapshots."
+                },
+                "has_change": {
+                    "type": "boolean",
+                    "description": "Snapshots are noticeably different."
+                },
+            }
+        }
+    }
+]
+
+
 def download_image(url):
     file_name = f'{uuid.uuid4()}.png'
     file = open(os.path.join("screenshots", file_name), 'wb')
@@ -32,22 +55,34 @@ def encode_image(image_path):
 
 
 def send_request(previous_image_data, current_image_data, query):
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {open_ai_key}"}
-    payload = {
-        "model": "gpt-4-turbo",
-        "messages": [{
+    return client.chat.completions.create(
+        messages=
+        [{
             "role": "user",
-            "content": [{"type": "text", "text": query},
+            "content": [{"type": "text", "text": "Answer the following query about the webpage snapshots: " + query +
+                                                 ". Give the response in the format of page_summary function call."},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{previous_image_data}"}},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{current_image_data}"}}]
         }],
-        "max_tokens": 300
-    }
-    return requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload).json()
+        model="gpt-4-turbo",
+        functions=functions,
+        function_call={
+            "name": functions[0]["name"]
+        },
+        temperature=0,
+        max_tokens=300
+    )
 
 
 def query_chat_gpt(previous_snapshot_url: str, current_snapshot_url: str, chat_gpt_query: str) -> str:
     encoded_previous_snapshot = encode_image(download_image(previous_snapshot_url))
     encoded_current_snapshot = encode_image(download_image(current_snapshot_url))
     response = send_request(encoded_previous_snapshot, encoded_current_snapshot, chat_gpt_query)
-    return response["choices"][0]["message"]["content"]
+
+    parsed_response = json.loads(response.choices[0].message.function_call.arguments)
+
+    print("parsed_response", parsed_response)
+
+    summary = Summary(**parsed_response)
+
+    return summary.summary
