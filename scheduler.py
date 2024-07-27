@@ -28,6 +28,11 @@ class Change(BaseModel):
     imageUrl: str
 
 
+class Summary(BaseModel):
+    has_change: bool
+    summary: str
+
+
 # load all pages
 page_response = supabase.table('Page').select('*').execute()
 pages = [Page(**page) for page in page_response.data]
@@ -46,7 +51,6 @@ pages_to_summarize = [page_by_page_id[change.pageId] for change in latest_change
                       if change.imageUrl != "" and change.summary != ""]
 
 # generate update for each page
-# TODO: fetch summary from chatGPT from page_query
 summary_by_page_id = {}
 for page in pages_to_summarize:
     previous_snapshot = previous_page_snapshot[page.pageId]
@@ -56,9 +60,11 @@ for page in pages_to_summarize:
     summary_by_page_id[page.pageId] = summary
 
 # create Changes
-changes_to_insert = [{"summary": summary_by_page_id.get(page.pageId, "Initial Snapshot"),
+default_summary = Summary(has_change=False, summary="Initial Snapshot")
+changes_to_insert = [{"summary": summary_by_page_id.get(page.pageId, default_summary).summary,
                       "pageId": page.pageId,
-                      "imageUrl": page_to_image_urls[page.pageUrl]}
+                      "imageUrl": page_to_image_urls[page.pageUrl],
+                      "hasChanged": summary_by_page_id.get(page.pageId, default_summary).has_change}
                      for page in pages]
 changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 

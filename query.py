@@ -83,4 +83,4 @@ def query_chat_gpt(previous_snapshot_url: str, current_snapshot_url: str, chat_g
 
     summary = Summary(**parsed_response)
 
-    return summary.summary
+    return summary

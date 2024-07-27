@@ -38,6 +38,7 @@ class Change(BaseModel):
     summary: str
     pageId: str
     imageUrl: str
+    hasChanged: bool
 
 
 class UpdateChange(Change):
@@ -71,7 +72,11 @@ async def add_pages(pages: List[Page]):
     if data:
         pages = [PageResponse(**page) for page in data]
 
-        changes_to_insert = [{"summary": "", "pageId": page.pageId, "imageUrl": ""} for page in pages]
+        changes_to_insert = [{"summary": "",
+                              "pageId": page.pageId,
+                              "imageUrl": "",
+                              "hasChanged": False}
+                             for page in pages]
 
         changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
