@@ -30,6 +30,10 @@ class Property(BaseModel):
     description: str
 
 
+class AddProperty(Property):
+    pageId: str
+
+
 class Page(BaseModel):
     userId: str
     pageUrl: str
@@ -155,6 +159,15 @@ async def get_all_changes(page_id: str):
 @app.post("/api/addChange/")
 async def add_change(change: Change):
     data, count = supabase.table('Change').insert(change.dict()).execute()
+    if data:
+        return {"data": data, "count": count}
+
+    return {'message': 'error!'}
+
+
+@app.post("/api/addProperty/")
+async def add_property(entry: AddProperty):
+    data, count = supabase.table('Property').insert(entry.dict()).execute()
     if data:
         return {"data": data, "count": count}
 
