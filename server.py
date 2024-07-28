@@ -24,10 +24,20 @@ app.add_middleware(
 )
 
 
+class Property(BaseModel):
+    property: str
+    type: str
+    description: str
+
+
 class Page(BaseModel):
     userId: str
     pageUrl: str
     query: str
+
+
+class AddPage(Page):
+    properties: List[Property]
 
 
 class UpdatePage(Page):
@@ -60,41 +70,53 @@ async def root():
 
 
 @app.post("/api/addPages/")
-async def add_pages(pages: List[Page]):
+async def add_pages(pages_to_add: List[AddPage]):
+    pages = [Page(userId=page.userId, pageUrl=page.pageUrl, query=page.query) for page in pages_to_add]
+
+    # page urls are unique per user.
+    properties_per_page_url = {page.pageUrl: page.properties for page in pages_to_add}
+
     page_dicts = [page.dict() for page in pages]
 
     # Add Pages to DB
-    response = supabase.table('Page').insert(page_dicts).execute()
-    data = response.data
-    pages = [UpdatePage(**page) for page in data]
+    insert_page_response = supabase.table('Page').insert(page_dicts).execute()
+    pages = [UpdatePage(**page) for page in insert_page_response.data]
     pages_by_page_id = dict((page.pageId, page) for page in pages)
 
-    if data:
-        pages = [PageResponse(**page) for page in data]
+    pages = [PageResponse(**page) for page in insert_page_response.data]
 
-        changes_to_insert = [{"summary": "",
-                              "pageId": page.pageId,
-                              "imageUrl": "",
-                              "hasChanged": False}
-                             for page in pages]
+    # Insert Updates
+    changes_to_insert = [{"summary": "",
+                          "pageId": page.pageId,
+                          "imageUrl": "",
+                          "hasChanged": False}
+                         for page in pages]
 
-        changes_response = supabase.table('Change').insert(changes_to_insert).execute()
+    changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
-        # updates Pages with latest Change
-        changes = [UpdateChange(**change) for change in changes_response.data]
-        pages_to_update = [{"userId": pages_by_page_id[change.pageId].userId,
-                            "pageUrl": pages_by_page_id[change.pageId].pageUrl,
-                            "query": pages_by_page_id[change.pageId].query,
-                            "pageId": change.pageId,
-                            "latestChange": change.changeId}
-                           for change in changes]
+    # updates Pages with latest Change
+    changes = [UpdateChange(**change) for change in changes_response.data]
+    pages_to_update = [{"userId": pages_by_page_id[change.pageId].userId,
+                        "pageUrl": pages_by_page_id[change.pageId].pageUrl,
+                        "query": pages_by_page_id[change.pageId].query,
+                        "pageId": change.pageId,
+                        "latestChange": change.changeId}
+                       for change in changes]
 
-        update_response = supabase.table('Page').upsert(pages_to_update).execute()
+    update_page_response = supabase.table('Page').upsert(pages_to_update).execute()
 
-        if update_response.data:
-            return {'message': 'success'}
+    # Insert Properties
+    properties_to_insert = []
+    for page in [PageResponse(**page) for page in update_page_response.data]:
+        for entry in properties_per_page_url[page.pageUrl]:
+            properties_to_insert.append({"pageId": page.pageId,
+                                         "property": entry.property,
+                                         "type": entry.type,
+                                         "description": entry.description})
+    properties_response = supabase.table('Property').insert(properties_to_insert).execute()
 
-    return {'message': 'error!'}
+    if properties_response.data:
+        return {'message': 'success'}
 
 
 @app.delete("/api/removePage/{page_id}")
