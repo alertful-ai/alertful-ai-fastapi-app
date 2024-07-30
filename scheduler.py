@@ -7,10 +7,10 @@ from query import query_chat_gpt
 from screenshot import capture_and_update_screenshot
 from supabase import create_client, Client
 from typing import List, Dict
-from util import to_dict
 from util import Summary
 from util import LinkedProperty
 from util import PageWithChange
+from util import update_pages_with_change
 
 load_dotenv()
 
@@ -76,11 +76,4 @@ changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
 # updates Pages with latest Change
 changes = [Change(**change) for change in changes_response.data]
-pages_to_update = [PageWithChange(userId=page_by_page_id[change.pageId].userId,
-                                  pageUrl=page_by_page_id[change.pageId].pageUrl,
-                                  query=page_by_page_id[change.pageId].query,
-                                  pageId=change.pageId,
-                                  latestChange=change.changeId)
-                   for change in changes]
-
-update_response = supabase.table('Page').upsert(to_dict(pages_to_update)).execute()
+update_pages_with_change(page_by_page_id, changes, supabase)

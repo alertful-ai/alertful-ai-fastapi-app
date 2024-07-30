@@ -9,9 +9,9 @@ from util import to_dict
 from util import LinkedProperty
 from util import Page
 from util import PageResponse
-from util import PageWithChange
 from util import Property
 from util import UpdatePage
+from util import update_pages_with_change
 
 
 load_dotenv()
@@ -75,14 +75,8 @@ async def add_pages(pages_to_add: List[PageWithProperty]):
 
     # updates Pages with latest Change
     changes = [UpdateChange(**change) for change in changes_response.data]
-    pages_to_update = [PageWithChange(userId=pages_by_page_id[change.pageId].userId,
-                                      pageUrl=pages_by_page_id[change.pageId].pageUrl,
-                                      query=pages_by_page_id[change.pageId].query,
-                                      pageId=change.pageId,
-                                      latestChange=change.changeId)
-                       for change in changes]
 
-    update_page_response = supabase.table('Page').upsert(to_dict(pages_to_update)).execute()
+    update_page_response = update_pages_with_change(pages_by_page_id, changes, supabase)
 
     # Insert Properties
     properties_to_insert = []
