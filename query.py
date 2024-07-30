@@ -1,13 +1,13 @@
 import base64
 import json
 import os
-from typing import List
-
 import requests
 import uuid
 from dotenv import load_dotenv
 from openai import OpenAI
-from pydantic import BaseModel
+from typing import List
+from util import Summary
+from util import LinkedProperty
 
 load_dotenv()
 
@@ -15,19 +15,7 @@ open_ai_key: str = os.environ.get("OPENAI_API_KEY")
 client = OpenAI(api_key=open_ai_key)
 
 
-class Property(BaseModel):
-    pageId: str
-    property: str
-    type: str
-    description: str
-
-
-class Summary(BaseModel):
-    has_change: bool
-    summary: str
-
-
-def create_function(properties: List[Property]):
+def create_function(properties: List[LinkedProperty]):
     entries = {}
     for prop in properties:
         entries[prop.property] = {
@@ -46,7 +34,7 @@ def create_function(properties: List[Property]):
     }
 
 
-def download_image(url):
+def download_image(url: str):
     file_name = f'{uuid.uuid4()}.png'
     file = open(os.path.join("screenshots", file_name), 'wb')
     response = requests.get(url)
@@ -55,12 +43,12 @@ def download_image(url):
     return file.name
 
 
-def encode_image(image_path):
+def encode_image(image_path: str):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-def send_request(previous_image_data, current_image_data, query: str, properties: List[Property]):
+def send_request(previous_image_data, current_image_data, query: str, properties: List[LinkedProperty]):
     functions = [create_function(properties)]
     return client.chat.completions.create(
         messages=
@@ -84,7 +72,7 @@ def send_request(previous_image_data, current_image_data, query: str, properties
 def query_chat_gpt(previous_snapshot_url: str,
                    current_snapshot_url: str,
                    chat_gpt_query: str,
-                   properties: List[Property]) -> Summary:
+                   properties: List[LinkedProperty]) -> Summary:
     encoded_previous_snapshot = encode_image(download_image(previous_snapshot_url))
     encoded_current_snapshot = encode_image(download_image(current_snapshot_url))
     response = send_request(encoded_previous_snapshot, encoded_current_snapshot, chat_gpt_query, properties)

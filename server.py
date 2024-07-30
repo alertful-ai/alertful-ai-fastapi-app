@@ -1,10 +1,16 @@
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
 from typing import List
-from fastapi.middleware.cors import CORSMiddleware
+from util import to_dict
+from util import LinkedProperty
+from util import Page
+from util import PageResponse
+from util import Property
+
 
 load_dotenv()
 
@@ -24,23 +30,7 @@ app.add_middleware(
 )
 
 
-class Property(BaseModel):
-    property: str
-    type: str
-    description: str
-
-
-class AddProperty(Property):
-    pageId: str
-
-
-class Page(BaseModel):
-    userId: str
-    pageUrl: str
-    query: str
-
-
-class AddPage(Page):
+class PageWithProperty(Page):
     properties: List[Property]
 
 
@@ -63,22 +53,13 @@ class UpdateChange(Change):
     changeId: str
 
 
-class PageResponse(BaseModel):
-    userId: str
-    pageUrl: str
-    query: str
-    created_at: str
-    pageId: str
-    updated_at: str
-
-
 @app.get("/")
 async def root():
     return {"message": "Hello, Alertful AI!"}
 
 
 @app.post("/api/addPages/")
-async def add_pages(pages_to_add: List[AddPage]):
+async def add_pages(pages_to_add: List[PageWithProperty]):
     pages = [Page(userId=page.userId, pageUrl=page.pageUrl, query=page.query) for page in pages_to_add]
 
     # page urls are unique per user.
@@ -117,10 +98,10 @@ async def add_pages(pages_to_add: List[AddPage]):
         else:
             for entry in properties_per_page_url[page.pageUrl]:
                 properties_to_insert.append(
-                    AddProperty(pageId=page.pageId,
-                                property=entry.property,
-                                type=entry.type,
-                                description=entry.description))
+                    LinkedProperty(pageId=page.pageId,
+                                   property=entry.property,
+                                   type=entry.type,
+                                   description=entry.description))
     properties_response = supabase.table('Property').insert(to_dict(properties_to_insert)).execute()
 
     if properties_response.data:
@@ -169,7 +150,7 @@ async def add_change(change: Change):
 
 
 @app.post("/api/addProperty/")
-async def add_property(entry: AddProperty):
+async def add_property(entry: LinkedProperty):
     data, count = supabase.table('Property').insert(entry.dict()).execute()
     if data:
         return {"data": data, "count": count}
@@ -177,20 +158,15 @@ async def add_property(entry: AddProperty):
     return {'message': 'error!'}
 
 
-def get_default_properties(pages_id: str) -> List[AddProperty]:
-    summary_property = AddProperty(pageId=pages_id,
-                                   property="summary",
-                                   type="string",
-                                   description="Summary of the changes between snapshots.")
+def get_default_properties(pages_id: str) -> List[LinkedProperty]:
+    summary_property = LinkedProperty(pageId=pages_id,
+                                      property="summary",
+                                      type="string",
+                                      description="Summary of the changes between snapshots.")
 
-    has_change_property = AddProperty(pageId=pages_id,
-                                      property="has_change",
-                                      type="boolean",
-                                      description="Snapshots are noticeably different.")
+    has_change_property = LinkedProperty(pageId=pages_id,
+                                         property="has_change",
+                                         type="boolean",
+                                         description="Snapshots are noticeably different.")
 
     return [summary_property, has_change_property]
-
-
-def to_dict(obj_list) -> List[dict]:
-    # Use a list comprehension to apply .dict() to each object in the list
-    return [obj.dict() for obj in obj_list]

@@ -1,13 +1,15 @@
 import asyncio
 import os
 from collections import defaultdict
-from typing import List, Dict
-
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from query import query_chat_gpt
 from screenshot import capture_and_update_screenshot
 from supabase import create_client, Client
+from typing import List, Dict
+from util import to_dict
+from util import Summary
+from util import LinkedProperty
 
 load_dotenv()
 
@@ -31,32 +33,15 @@ class Change(BaseModel):
     imageUrl: str
 
 
-class Summary(BaseModel):
-    has_change: bool
-    summary: str
-
-
-class Property(BaseModel):
-    pageId: str
-    property: str
-    type: str
-    description: str
-
-
-def get_properties_by_page_id() -> Dict[str, List[Property]]:
+def get_properties_by_page_id() -> Dict[str, List[LinkedProperty]]:
     properties_response = (supabase.table('Property')
                            .select('pageId', 'property', 'type', 'description')
                            .execute())
-    properties = [Property(**entry) for entry in properties_response.data]
+    properties = [LinkedProperty(**entry) for entry in properties_response.data]
     grouped_properties = defaultdict(list)
     for prop in properties:
         grouped_properties[prop.pageId].append(prop)
     return dict(grouped_properties)
-
-
-def to_dict(obj_list) -> List[dict]:
-    # Use a list comprehension to apply .dict() to each object in the list
-    return [obj.dict() for obj in obj_list]
 
 
 # load all pages
