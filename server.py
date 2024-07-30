@@ -2,9 +2,9 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from supabase import create_client, Client
 from typing import List
+from util import Change
 from util import to_dict
 from util import LinkedProperty
 from util import Page
@@ -36,14 +36,11 @@ class PageWithProperty(Page):
     properties: List[Property]
 
 
-class Change(BaseModel):
-    summary: str
-    pageId: str
-    imageUrl: str
+class ChangeWithHasChange(Change):
     hasChanged: bool
 
 
-class UpdateChange(Change):
+class UpdateChange(ChangeWithHasChange):
     changeId: str
 
 
@@ -69,7 +66,7 @@ async def add_pages(pages_to_add: List[PageWithProperty]):
     pages = [PageResponse(**page) for page in insert_page_response.data]
 
     # Insert Updates
-    changes_to_insert = [Change(summary="", pageId=page.pageId, imageUrl="", hasChanged=False) for page in pages]
+    changes_to_insert = [ChangeWithHasChange(summary="", pageId=page.pageId, imageUrl="", hasChanged=False) for page in pages]
 
     changes_response = supabase.table('Change').insert(to_dict(changes_to_insert)).execute()
 
@@ -129,7 +126,7 @@ async def get_all_changes(page_id: str):
 
 
 @app.post("/api/addChange/")
-async def add_change(change: Change):
+async def add_change(change: ChangeWithHasChange):
     data, count = supabase.table('Change').insert(change.dict()).execute()
     if data:
         return {"data": data, "count": count}

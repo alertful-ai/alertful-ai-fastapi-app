@@ -3,6 +3,12 @@ from typing import List
 from pydantic import BaseModel
 
 
+class Change(BaseModel):
+    pageId: str
+    summary: str
+    imageUrl: str
+
+
 class Property(BaseModel):
     property: str
     type: str

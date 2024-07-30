@@ -2,11 +2,11 @@ import asyncio
 import os
 from collections import defaultdict
 from dotenv import load_dotenv
-from pydantic import BaseModel
 from query import query_chat_gpt
 from screenshot import capture_and_update_screenshot
 from supabase import create_client, Client
 from typing import List, Dict
+from util import Change
 from util import Summary
 from util import LinkedProperty
 from util import PageWithChange
@@ -19,11 +19,8 @@ key: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 
 
-class Change(BaseModel):
+class ChangeWithId(Change):
     changeId: str
-    pageId: str
-    summary: str
-    imageUrl: str
 
 
 def get_properties_by_page_id() -> Dict[str, List[LinkedProperty]]:
@@ -49,7 +46,7 @@ page_to_image_urls = asyncio.run(capture_and_update_screenshot(page_urls))
 latestChangeIds = [page.latestChange for page in pages]
 latest_changes_response = (supabase.table('Change').select("*")
                            .in_('changeId', latestChangeIds).execute())
-latest_changes = [Change(**change) for change in latest_changes_response.data]
+latest_changes = [ChangeWithId(**change) for change in latest_changes_response.data]
 previous_page_snapshot = {change.pageId: change.imageUrl for change in latest_changes}
 pages_to_summarize = [page_by_page_id[change.pageId] for change in latest_changes
                       if change.imageUrl != "" and change.summary != ""]
@@ -75,5 +72,5 @@ changes_to_insert = [{"summary": summary_by_page_id.get(page.pageId, default_sum
 changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
 # updates Pages with latest Change
-changes = [Change(**change) for change in changes_response.data]
+changes = [ChangeWithId(**change) for change in changes_response.data]
 update_pages_with_change(page_by_page_id, changes, supabase)
