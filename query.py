@@ -27,26 +27,23 @@ class Summary(BaseModel):
     summary: str
 
 
-functions = [
-    {
+def create_function(properties: List[Property]):
+    entries = {}
+    for prop in properties:
+        entries[prop.property] = {
+            "type": prop.type,
+            "description": prop.description
+        }
+
+    return {
         "name": "page_summary",
         "description": "Compare the pages based off the users prompt.",
         "parameters": {
             "type": "object",
             "required": ["summary", "has_change"],
-            "properties": {
-                "summary": {
-                    "type": "string",
-                    "description": "Summary of the changes between snapshots."
-                },
-                "has_change": {
-                    "type": "boolean",
-                    "description": "Snapshots are noticeably different."
-                },
-            }
+            "properties": entries
         }
     }
-]
 
 
 def download_image(url):
@@ -63,7 +60,8 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-def send_request(previous_image_data, current_image_data, query):
+def send_request(previous_image_data, current_image_data, query: str, properties: List[Property]):
+    functions = [create_function(properties)]
     return client.chat.completions.create(
         messages=
         [{
@@ -89,7 +87,7 @@ def query_chat_gpt(previous_snapshot_url: str,
                    properties: List[Property]) -> Summary:
     encoded_previous_snapshot = encode_image(download_image(previous_snapshot_url))
     encoded_current_snapshot = encode_image(download_image(current_snapshot_url))
-    response = send_request(encoded_previous_snapshot, encoded_current_snapshot, chat_gpt_query)
+    response = send_request(encoded_previous_snapshot, encoded_current_snapshot, chat_gpt_query, properties)
 
     parsed_response = json.loads(response.choices[0].message.function_call.arguments)
 
