@@ -48,6 +48,10 @@ class UpdatePage(Page):
     pageId: str
 
 
+class PageWithChange(UpdatePage):
+    latestChange: str
+
+
 class Change(BaseModel):
     summary: str
     pageId: str
@@ -90,34 +94,34 @@ async def add_pages(pages_to_add: List[AddPage]):
     pages = [PageResponse(**page) for page in insert_page_response.data]
 
     # Insert Updates
-    changes_to_insert = [{"summary": "",
-                          "pageId": page.pageId,
-                          "imageUrl": "",
-                          "hasChanged": False}
-                         for page in pages]
+    changes_to_insert = [Change(summary="", pageId=page.pageId, imageUrl="", hasChanged=False) for page in pages]
 
-    changes_response = supabase.table('Change').insert(changes_to_insert).execute()
+    changes_response = supabase.table('Change').insert(to_dict(changes_to_insert)).execute()
 
     # updates Pages with latest Change
     changes = [UpdateChange(**change) for change in changes_response.data]
-    pages_to_update = [{"userId": pages_by_page_id[change.pageId].userId,
-                        "pageUrl": pages_by_page_id[change.pageId].pageUrl,
-                        "query": pages_by_page_id[change.pageId].query,
-                        "pageId": change.pageId,
-                        "latestChange": change.changeId}
+    pages_to_update = [PageWithChange(userId=pages_by_page_id[change.pageId].userId,
+                                      pageUrl=pages_by_page_id[change.pageId].pageUrl,
+                                      query=pages_by_page_id[change.pageId].query,
+                                      pageId=change.pageId,
+                                      latestChange=change.changeId)
                        for change in changes]
 
-    update_page_response = supabase.table('Page').upsert(pages_to_update).execute()
+    update_page_response = supabase.table('Page').upsert(to_dict(pages_to_update)).execute()
 
     # Insert Properties
     properties_to_insert = []
     for page in [PageResponse(**page) for page in update_page_response.data]:
-        for entry in properties_per_page_url[page.pageUrl]:
-            properties_to_insert.append({"pageId": page.pageId,
-                                         "property": entry.property,
-                                         "type": entry.type,
-                                         "description": entry.description})
-    properties_response = supabase.table('Property').insert(properties_to_insert).execute()
+        if len(properties_per_page_url[page.pageUrl]) == 0:
+            properties_to_insert.extend(get_default_properties(pages_id=page.pageId))
+        else:
+            for entry in properties_per_page_url[page.pageUrl]:
+                properties_to_insert.append(
+                    AddProperty(pageId=page.pageId,
+                                property=entry.property,
+                                type=entry.type,
+                                description=entry.description))
+    properties_response = supabase.table('Property').insert(to_dict(properties_to_insert)).execute()
 
     if properties_response.data:
         return {'message': 'success'}
@@ -125,7 +129,6 @@ async def add_pages(pages_to_add: List[AddPage]):
 
 @app.delete("/api/removePage/{page_id}")
 async def remove_page(page_id):
-    print("PAGE ID", page_id)
     data, count = supabase.table('Page').delete().eq('pageId', page_id).execute()
     if data:
         return {"data": data, "count": count}
@@ -172,3 +175,22 @@ async def add_property(entry: AddProperty):
         return {"data": data, "count": count}
 
     return {'message': 'error!'}
+
+
+def get_default_properties(pages_id: str) -> List[AddProperty]:
+    summary_property = AddProperty(pageId=pages_id,
+                                   property="summary",
+                                   type="string",
+                                   description="Summary of the changes between snapshots.")
+
+    has_change_property = AddProperty(pageId=pages_id,
+                                      property="has_change",
+                                      type="boolean",
+                                      description="Snapshots are noticeably different.")
+
+    return [summary_property, has_change_property]
+
+
+def to_dict(obj_list) -> List[dict]:
+    # Use a list comprehension to apply .dict() to each object in the list
+    return [obj.dict() for obj in obj_list]

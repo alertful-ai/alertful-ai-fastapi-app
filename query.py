@@ -1,6 +1,8 @@
 import base64
 import json
 import os
+from typing import List
+
 import requests
 import uuid
 from dotenv import load_dotenv
@@ -11,6 +13,13 @@ load_dotenv()
 
 open_ai_key: str = os.environ.get("OPENAI_API_KEY")
 client = OpenAI(api_key=open_ai_key)
+
+
+class Property(BaseModel):
+    pageId: str
+    property: str
+    type: str
+    description: str
 
 
 class Summary(BaseModel):
@@ -74,7 +83,10 @@ def send_request(previous_image_data, current_image_data, query):
     )
 
 
-def query_chat_gpt(previous_snapshot_url: str, current_snapshot_url: str, chat_gpt_query: str) -> str:
+def query_chat_gpt(previous_snapshot_url: str,
+                   current_snapshot_url: str,
+                   chat_gpt_query: str,
+                   properties: List[Property]) -> Summary:
     encoded_previous_snapshot = encode_image(download_image(previous_snapshot_url))
     encoded_current_snapshot = encode_image(download_image(current_snapshot_url))
     response = send_request(encoded_previous_snapshot, encoded_current_snapshot, chat_gpt_query)

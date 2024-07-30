@@ -1,5 +1,8 @@
 import asyncio
 import os
+from collections import defaultdict
+from typing import List, Dict
+
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from query import query_chat_gpt
@@ -33,6 +36,29 @@ class Summary(BaseModel):
     summary: str
 
 
+class Property(BaseModel):
+    pageId: str
+    property: str
+    type: str
+    description: str
+
+
+def get_properties_by_page_id() -> Dict[str, List[Property]]:
+    properties_response = (supabase.table('Property')
+                           .select('pageId', 'property', 'type', 'description')
+                           .execute())
+    properties = [Property(**entry) for entry in properties_response.data]
+    grouped_properties = defaultdict(list)
+    for prop in properties:
+        grouped_properties[prop.pageId].append(prop)
+    return dict(grouped_properties)
+
+
+def to_dict(obj_list) -> List[dict]:
+    # Use a list comprehension to apply .dict() to each object in the list
+    return [obj.dict() for obj in obj_list]
+
+
 # load all pages
 page_response = supabase.table('Page').select('*').execute()
 pages = [Page(**page) for page in page_response.data]
@@ -50,13 +76,15 @@ previous_page_snapshot = {change.pageId: change.imageUrl for change in latest_ch
 pages_to_summarize = [page_by_page_id[change.pageId] for change in latest_changes
                       if change.imageUrl != "" and change.summary != ""]
 
+properties_by_page_id = get_properties_by_page_id()
+
 # generate update for each page
 summary_by_page_id = {}
 for page in pages_to_summarize:
     previous_snapshot = previous_page_snapshot[page.pageId]
     current_snapshot = page_to_image_urls[page.pageUrl]
     query = page.query
-    summary = query_chat_gpt(previous_snapshot, current_snapshot, query)
+    summary = query_chat_gpt(previous_snapshot, current_snapshot, query, properties_by_page_id[page.pageId])
     summary_by_page_id[page.pageId] = summary
 
 # create Changes
@@ -70,11 +98,11 @@ changes_response = supabase.table('Change').insert(changes_to_insert).execute()
 
 # updates Pages with latest Change
 changes = [Change(**change) for change in changes_response.data]
-pages_to_update = [{"userId": page_by_page_id[change.pageId].userId,
-                    "pageUrl": page_by_page_id[change.pageId].pageUrl,
-                    "query": page_by_page_id[change.pageId].query,
-                    "pageId": change.pageId,
-                    "latestChange": change.changeId}
+pages_to_update = [Page(userId=page_by_page_id[change.pageId].userId,
+                        pageUrl=page_by_page_id[change.pageId].pageUrl,
+                        query=page_by_page_id[change.pageId].query,
+                        pageId=change.pageId,
+                        latestChange=change.changeId)
                    for change in changes]
 
-update_response = supabase.table('Page').upsert(pages_to_update).execute()
+update_response = supabase.table('Page').upsert(to_dict(pages_to_update)).execute()
