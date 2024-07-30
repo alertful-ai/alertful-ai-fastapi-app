@@ -30,7 +30,7 @@ s3 = boto3.client(
 
 
 # Capture a screenshot of a URL and return the screenshot
-async def capture_screenshot(page, page_url, file_path):
+async def capture_screenshot(page, page_url: str, file_path: str):
     await page.goto(page_url)
     await page.screenshot({'path': file_path, 'fullPage': True})
 
