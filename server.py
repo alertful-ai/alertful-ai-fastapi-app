@@ -9,7 +9,9 @@ from util import to_dict
 from util import LinkedProperty
 from util import Page
 from util import PageResponse
+from util import PageWithChange
 from util import Property
+from util import UpdatePage
 
 
 load_dotenv()
@@ -32,14 +34,6 @@ app.add_middleware(
 
 class PageWithProperty(Page):
     properties: List[Property]
-
-
-class UpdatePage(Page):
-    pageId: str
-
-
-class PageWithChange(UpdatePage):
-    latestChange: str
 
 
 class Change(BaseModel):

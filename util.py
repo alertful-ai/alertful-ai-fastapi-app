@@ -19,6 +19,14 @@ class Page(BaseModel):
     query: str
 
 
+class UpdatePage(Page):
+    pageId: str
+
+
+class PageWithChange(UpdatePage):
+    latestChange: str
+
+
 class PageResponse(Page):
     created_at: str
     pageId: str
