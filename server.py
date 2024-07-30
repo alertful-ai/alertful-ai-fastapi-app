@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,6 +53,10 @@ async def root():
 @app.post("/api/addPages/")
 async def add_pages(pages_to_add: List[PageWithProperty]):
     pages = [Page(userId=page.userId, pageUrl=page.pageUrl, query=page.query) for page in pages_to_add]
+
+    invalid_urls = get_invalid_page_urls(pages)
+    if invalid_urls:
+        return {'message': 'invalid URLS: {}'.format(invalid_urls)}
 
     # page urls are unique per user.
     properties_per_page_url = {page.pageUrl: page.properties for page in pages_to_add}
@@ -155,3 +160,26 @@ def get_default_properties(pages_id: str) -> List[LinkedProperty]:
                                          description="Snapshots are noticeably different.")
 
     return [summary_property, has_change_property]
+
+
+def get_invalid_page_urls(pages: List[Page]):
+    invalid_urls = []
+    for page in pages:
+        page_url = page.pageUrl
+        if not is_https_url(page_url):
+            invalid_urls.append(page_url)
+    return invalid_urls
+
+
+def is_https_url(url):
+    # Define the regular expression pattern for HTTPS URLs
+    pattern = re.compile(
+        r'^https:\/\/'  # Protocol part: must start with https://
+        r'(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})'  # Domain name with at least one dot
+        r'(:[0-9]{1,5})?'  # Optional port number
+        r'(\/[a-zA-Z0-9_\-\.~!$&\'()*+,;=:@/]*)*'  # Path
+        r'(\?[a-zA-Z0-9_\-\.~!$&\'()*+,;=:@/?]*)?'  # Query string
+        r'(#[-a-zA-Z0-9_\-\.~!$&\'()*+,;=:@/?]*)?$'  # Fragment
+    )
+
+    return bool(pattern.match(url))
